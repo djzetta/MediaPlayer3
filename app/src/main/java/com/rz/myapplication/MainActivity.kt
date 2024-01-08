@@ -1,10 +1,12 @@
 package com.rz.myapplication
 
 import android.app.Activity
+import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
 import android.provider.DocumentsContract
+import android.widget.Button
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
 import com.google.android.exoplayer2.ExoPlayer
@@ -34,7 +36,11 @@ class MainActivity : AppCompatActivity() {
         val playerView = findViewById<PlayerView>(R.id.player_view)
         playerView.player = player
 
-        openFolderChooser()
+        val button = findViewById<Button>(R.id.button)
+        button.setOnClickListener { openFolderChooser() }
+
+        val savedUri = loadSavedFolderUri()
+        savedUri?.let { loadMusicFromFolder(it) }
     }
 
     private fun openFolderChooser() {
@@ -51,10 +57,26 @@ class MainActivity : AppCompatActivity() {
                     uri,
                     Intent.FLAG_GRANT_READ_URI_PERMISSION
                 )
+                saveFolderUri(uri) // Guarda la URI
                 loadMusicFromFolder(uri)
             }
         }
     }
+
+
+        private fun saveFolderUri(uri: Uri) {
+            val sharedPref = getPreferences(Context.MODE_PRIVATE) ?: return
+            with(sharedPref.edit()) {
+                putString("SAVED_FOLDER_URI", uri.toString())
+                apply()
+            }
+        }
+
+        private fun loadSavedFolderUri(): Uri? {
+            val sharedPref = getPreferences(Context.MODE_PRIVATE)
+            val uriString = sharedPref.getString("SAVED_FOLDER_URI", null)
+            return uriString?.let { Uri.parse(it) }
+        }
 
     private fun loadMusicFromFolder(folderUri: Uri) {
         CoroutineScope(Dispatchers.IO).launch {
