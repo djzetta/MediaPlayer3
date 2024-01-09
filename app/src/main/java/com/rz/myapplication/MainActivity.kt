@@ -36,7 +36,7 @@ class MainActivity : AppCompatActivity() {
         val playerView = findViewById<PlayerView>(R.id.player_view)
         playerView.player = player
 
-        val button = findViewById<Button>(R.id.button)
+        val button = findViewById<Button>(R.id.button_draw)
         button.setOnClickListener { openFolderChooser() }
 
         val savedUri = loadSavedFolderUri()
