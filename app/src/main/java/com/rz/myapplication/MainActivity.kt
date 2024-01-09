@@ -7,8 +7,10 @@ import android.net.Uri
 import android.os.Bundle
 import android.provider.DocumentsContract
 import android.widget.Button
+import android.widget.ImageView
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
+import com.bumptech.glide.Glide
 import com.google.android.exoplayer2.ExoPlayer
 import com.google.android.exoplayer2.MediaItem
 import com.google.android.exoplayer2.Player
@@ -20,6 +22,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+
 
 class MainActivity : AppCompatActivity() {
 
@@ -41,6 +44,13 @@ class MainActivity : AppCompatActivity() {
 
         val savedUri = loadSavedFolderUri()
         savedUri?.let { loadMusicFromFolder(it) }
+
+
+        val myGifImageView = findViewById<ImageView>(R.id.myGifImageView)
+        Glide.with(this)
+            .load(R.drawable.evologox)// Reemplaza con el nombre de tu archivo GIF
+                .into(myGifImageView)
+
     }
 
     private fun openFolderChooser() {

@@ -39,12 +39,11 @@
         app:layout_constraintTop_toTopOf="@+id/player_view">
 
         <ImageView
-            android:id="@+id/ivAlbumArt"
+            android:id="@+id/myGifImageView"
             android:layout_width="170dp"
             android:layout_height="99dp"
             android:layout_gravity="center_horizontal"
             android:contentDescription="@string/imagen"
-            android:src="@drawable/bati2"
             android:visibility="visible"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
