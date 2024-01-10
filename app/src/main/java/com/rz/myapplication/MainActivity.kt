@@ -1,12 +1,16 @@
 package com.rz.myapplication
 
 import android.app.Activity
+import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
 import android.provider.DocumentsContract
+import android.widget.Button
+import android.widget.ImageView
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
+import com.bumptech.glide.Glide
 import com.google.android.exoplayer2.ExoPlayer
 import com.google.android.exoplayer2.MediaItem
 import com.google.android.exoplayer2.Player
@@ -18,6 +22,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+
 
 class MainActivity : AppCompatActivity() {
 
@@ -34,7 +39,18 @@ class MainActivity : AppCompatActivity() {
         val playerView = findViewById<PlayerView>(R.id.player_view)
         playerView.player = player
 
-        openFolderChooser()
+        val button = findViewById<Button>(R.id.button_draw)
+        button.setOnClickListener { openFolderChooser() }
+
+        val savedUri = loadSavedFolderUri()
+        savedUri?.let { loadMusicFromFolder(it) }
+
+
+        val myGifImageView = findViewById<ImageView>(R.id.myGifImageView)
+        Glide.with(this)
+            .load(R.drawable.evologox)// Reemplaza con el nombre de tu archivo GIF
+                .into(myGifImageView)
+
     }
 
     private fun openFolderChooser() {
@@ -51,10 +67,26 @@ class MainActivity : AppCompatActivity() {
                     uri,
                     Intent.FLAG_GRANT_READ_URI_PERMISSION
                 )
+                saveFolderUri(uri) // Guarda la URI
                 loadMusicFromFolder(uri)
             }
         }
     }
+
+
+        private fun saveFolderUri(uri: Uri) {
+            val sharedPref = getPreferences(Context.MODE_PRIVATE) ?: return
+            with(sharedPref.edit()) {
+                putString("SAVED_FOLDER_URI", uri.toString())
+                apply()
+            }
+        }
+
+        private fun loadSavedFolderUri(): Uri? {
+            val sharedPref = getPreferences(Context.MODE_PRIVATE)
+            val uriString = sharedPref.getString("SAVED_FOLDER_URI", null)
+            return uriString?.let { Uri.parse(it) }
+        }
 
     private fun loadMusicFromFolder(folderUri: Uri) {
         CoroutineScope(Dispatchers.IO).launch {
