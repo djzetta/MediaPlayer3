@@ -26,6 +26,12 @@ import kotlinx.coroutines.withContext
 
 class MainActivity : AppCompatActivity() {
 
+    private fun updateFileName() {
+        val currentIndex = player.currentMediaItemIndex
+        findViewById<TextView>(R.id.tvFileName).text =
+            fileNames.getOrElse(currentIndex) { "No File" }
+    }
+
     private val FOLDER_PICKER_REQUEST_CODE = 999
     private lateinit var player: ExoPlayer
     private var selectedFolderUri: Uri? = null
@@ -49,7 +55,7 @@ class MainActivity : AppCompatActivity() {
         val myGifImageView = findViewById<ImageView>(R.id.myGifImageView)
         Glide.with(this)
             .load(R.drawable.evologox)// Reemplaza con el nombre de tu archivo GIF
-                .into(myGifImageView)
+            .into(myGifImageView)
 
     }
 
@@ -74,19 +80,19 @@ class MainActivity : AppCompatActivity() {
     }
 
 
-        private fun saveFolderUri(uri: Uri) {
-            val sharedPref = getPreferences(Context.MODE_PRIVATE) ?: return
-            with(sharedPref.edit()) {
-                putString("SAVED_FOLDER_URI", uri.toString())
-                apply()
-            }
+    private fun saveFolderUri(uri: Uri) {
+        val sharedPref = getPreferences(Context.MODE_PRIVATE) ?: return
+        with(sharedPref.edit()) {
+            putString("SAVED_FOLDER_URI", uri.toString())
+            apply()
         }
+    }
 
-        private fun loadSavedFolderUri(): Uri? {
-            val sharedPref = getPreferences(Context.MODE_PRIVATE)
-            val uriString = sharedPref.getString("SAVED_FOLDER_URI", null)
-            return uriString?.let { Uri.parse(it) }
-        }
+    private fun loadSavedFolderUri(): Uri? {
+        val sharedPref = getPreferences(Context.MODE_PRIVATE)
+        val uriString = sharedPref.getString("SAVED_FOLDER_URI", null)
+        return uriString?.let { Uri.parse(it) }
+    }
 
     private fun loadMusicFromFolder(folderUri: Uri) {
         CoroutineScope(Dispatchers.IO).launch {
@@ -102,7 +108,8 @@ class MainActivity : AppCompatActivity() {
                 childrenUri,
                 arrayOf(
                     DocumentsContract.Document.COLUMN_DOCUMENT_ID,
-                    DocumentsContract.Document.COLUMN_DISPLAY_NAME
+                    DocumentsContract.Document.COLUMN_DISPLAY_NAME,
+                    DocumentsContract.Document.COLUMN_MIME_TYPE
                 ),
                 null,
                 null,
@@ -112,40 +119,63 @@ class MainActivity : AppCompatActivity() {
                     cursor.getColumnIndexOrThrow(DocumentsContract.Document.COLUMN_DOCUMENT_ID)
                 val nameColumn =
                     cursor.getColumnIndexOrThrow(DocumentsContract.Document.COLUMN_DISPLAY_NAME)
+                val mimeTypeColumn =
+                    cursor.getColumnIndexOrThrow(DocumentsContract.Document.COLUMN_MIME_TYPE)
+
 
                 while (cursor.moveToNext()) {
-                    val documentId = cursor.getString(idColumn)
-                    val fileUri = DocumentsContract.buildDocumentUriUsingTree(folderUri, documentId)
-                    val fileName = cursor.getString(nameColumn)
-                    fileNames.add(fileName)
+                    val mimeType = cursor.getString(mimeTypeColumn)
+                    if (mimeType.startsWith("audio/") || mimeType.startsWith("video/")) { // Filtrar solo audio y video
 
-                    val mediaItem = MediaItem.fromUri(fileUri)
-                    mediaSource.addMediaSource(
-                        ProgressiveMediaSource.Factory(DefaultDataSource.Factory(this@MainActivity))
-                            .createMediaSource(mediaItem)
-                    )
+                        val documentId = cursor.getString(idColumn)
+                        val fileUri =
+                            DocumentsContract.buildDocumentUriUsingTree(folderUri, documentId)
+                        val fileName = cursor.getString(nameColumn)
+                        fileNames.add(fileName)
+
+                        val mediaItem = MediaItem.fromUri(fileUri)
+                        mediaSource.addMediaSource(
+                            ProgressiveMediaSource.Factory(DefaultDataSource.Factory(this@MainActivity))
+                                .createMediaSource(mediaItem)
+                        )
+                    }
                 }
             }
+                withContext(Dispatchers.Main) {
+                    player.setMediaSource(mediaSource)
+                    player.prepare()
+                    player.play()
+                    updateFileName() // Agrega esta línea para actualizar el nombre del archivo al iniciar
 
-            withContext(Dispatchers.Main) {
-                player.setMediaSource(mediaSource)
-                player.prepare()
-                player.play()
+                    player.addListener(object : Player.Listener {
+                        override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
+                            super.onMediaItemTransition(mediaItem, reason)
+                            updateFileName() // Esto se llama cuando cambias de pista
+                        }
+                    })
+                }
 
-                player.addListener(object : Player.Listener {
-                    override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
-                        super.onMediaItemTransition(mediaItem, reason)
-                        val currentIndex = player.currentMediaItemIndex
-                        findViewById<TextView>(R.id.tvFileName).text =
-                            fileNames.getOrElse(currentIndex) { "" }
-                    }
-                })
+
+                withContext(Dispatchers.Main) {
+                    player.setMediaSource(mediaSource)
+                    player.prepare()
+                    player.play()
+
+                    player.addListener(object : Player.Listener {
+                        override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
+                            super.onMediaItemTransition(mediaItem, reason)
+                            val currentIndex = player.currentMediaItemIndex
+                            findViewById<TextView>(R.id.tvFileName).text =
+                                fileNames.getOrElse(currentIndex) { "" }
+                        }
+                    })
+                }
             }
+        }
+
+        override fun onDestroy() {
+            super.onDestroy()
+            player.release()
         }
     }
 
-    override fun onDestroy() {
-        super.onDestroy()
-        player.release()
-    }
-}
